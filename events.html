@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        h1 { color: #007bff; text-align: center; margin-bottom: 30px; }
+        .back-btn { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; }
+        .register-btn { background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; margin-left: 10px; }
+        .register-btn:hover { background-color: #1e7e34; }
+        .event-card { 
+            border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background-color: #fff; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); display: flex; justify-content: space-between; align-items: center; 
+        }
+
+        /* Admin Section Styling */
+        #admin-actions { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #cce0ff; }
+        #admin-actions input, #admin-actions textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        #admin-actions button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        .logout-btn { background-color: #dc3545; }
+        .gemini-report { 
+            margin-top: 15px; padding: 15px; border-left: 4px solid #ff9800; background-color: #fffaf0; 
+            white-space: pre-wrap; font-size: 0.95em; color: #333;
+        }
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+    </style>
+</head>
+<body>
+    
+
+    <div class="container">
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        
+        {% if is_admin %}
+        <div id="admin-actions">
+            <h2><i class="fas fa-user-shield"></i> Admin: Create New Event</h2>
+            <form id="event-creation-form">
+                <input type="text" name="title" placeholder="Event Title" required>
+                <input type="date" name="date" required>
+                <input type="time" name="time" required>
+                <textarea name="details" placeholder="Event Details" rows="3" required></textarea>
+                <button type="submit"><i class="fas fa-plus-circle"></i> Create Event</button>
+            </form>
+            <a href="{{ url_for('admin_logout') }}" class="logout-btn register-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <hr style="margin-top: 15px;">
+        </div>
+        {% else %}
+        <!-- Standard Login button for public view -->
+        <a href="{{ url_for('admin_login') }}" class="register-btn" style="float: right; margin-bottom: 20px;"><i class="fas fa-sign-in-alt"></i> Admin Login</a>
+        {% endif %}
+
+        <h1>Upcoming Campus Events</h1>
+        
+        <div class="event-list">
+            {% for event in events %}
+            <div class="event-card">
+                <div style="flex-grow: 1;">
+                    <h3>{{ event.title }}</h3>
+                    <p><strong>Date:</strong> {{ event.date }} | <strong>Time:</strong> {{ event.time }}</p>
+                    <p>Details: {{ event.details }}</p>
+
+                    <!-- Gemini Admin Tools -->
+                    {% if is_admin %}
+                    <div class="admin-controls">
+                        <button onclick="generateSummary('{{ event.title }}', '{{ event.details }}', '{{ event.id }}')" style="background-color: #007bff; color: white; padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer;">
+                            <i class="fas fa-robot"></i> Generate Summary
+                        </button>
+                        <button onclick="analyzeRegistrations('{{ event.id }}')" style="background-color: #ff9800; color: white; padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer;">
+                            <i class="fas fa-chart-line"></i> Analysis Report
+                        </button>
+                        <!-- DELETE BUTTON -->
+                        <button class="delete-btn" onclick="deleteEvent('{{ event.id }}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                    {% endif %}
+
+                </div>
+                <!-- Registration Button (Uses event.id) -->
+                <button class="register-btn" onclick="registerForEvent('{{ event.id }}')">Register Now</button>
+            </div>
+            
+            <!-- Dedicated area for Gemini reports -->
+            <div id="summary-{{ event.id }}" class="gemini-report" style="display: none;"></div>
+
+            {% endfor %}
+
+            {% if not events %}
+            <p style="text-align: center; color: #666;">No events currently scheduled.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Custom function to show status messages
+        function showStatus(message, isSuccess) {
+            const statusBox = document.createElement('div');
+            statusBox.style.cssText = `
+                position: fixed; top: 20px; right: 20px; padding: 15px;
+                border-radius: 8px; color: white; z-index: 1000;
+                background-color: ${isSuccess ? '#28a745' : '#dc3545'}; 
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                transition: opacity 0.5s ease-in-out;
+                opacity: 1;
+            `;
+            statusBox.textContent = message;
+            document.body.appendChild(statusBox);
+
+            setTimeout(() => {
+                statusBox.style.opacity = '0';
+                setTimeout(() => statusBox.remove(), 500);
+            }, 4000); // Hide after 4 seconds
+        }
+
+        // --- 1. Event Creation ---
+        document.getElementById('event-creation-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const data = new URLSearchParams(formData).toString();
+
+            fetch('/events/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showStatus('Event created successfully!', true); 
+                    form.reset();
+                    window.location.reload(); 
+                } else {
+                    showStatus('Error: Failed to create event: ' + result.message, false);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                showStatus('Network error. Failed to connect to server.', false); 
+            });
+        });
+        
+        // --- 2. Event Deletion (New Functionality) ---
+        function deleteEvent(eventId) {
+            // Using a simple confirmation dialog (browser standard, but better to use a modal)
+            if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+                return;
+            }
+
+            showStatus('Deleting event...', false); 
+
+            fetch(`/events/delete/${eventId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showStatus('Event deleted successfully!', true);
+                    window.location.reload(); // Reload to update list
+                } else {
+                    showStatus('Deletion failed: ' + result.message, false);
+                }
+            })
+            .catch(error => {
+                console.error('Delete Fetch Error:', error);
+                showStatus('Failed to connect to server for deletion.', false);
+            });
+        }
+
+
+        // --- 3. Event Registration ---
+        function registerForEvent(eventId) {
+            showStatus('Registration process initiated...', true); 
+
+            fetch(`/events/register/${eventId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}) 
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server returned non-OK status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showStatus(`Registration successful! Your ID is: ${data.user_id}`, true);
+                } else {
+                    showStatus('Registration failed: ' + data.message, false);
+                }
+            })
+            .catch(error => {
+                console.error('Registration Fetch Error:', error);
+                showStatus('Failed to connect to the server for registration.', false);
+            });
+        }
+        
+        // --- 4. Gemini Summary Generator ---
+        function generateSummary(title, details, eventId) {
+            const outputElement = document.getElementById(`summary-${eventId}`); 
+            const data = new URLSearchParams({ title: title, details: details }).toString();
+            
+            outputElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generating summary...`;
+            outputElement.style.display = 'block';
+
+            showStatus('Generating summary...', true);
+
+            fetch('/events/generate_summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    outputElement.innerHTML = `<strong>🤖 Gemini Summary:</strong> ${result.summary}`;
+                    showStatus('Summary ready!', true);
+                } else {
+                    outputElement.innerHTML = `<strong>❌ Error:</strong> ${result.message}`;
+                    showStatus('Failed to generate summary.', false);
+                }
+            })
+            .catch(error => {
+                console.error('Gemini Summary Fetch Error:', error);
+                outputElement.innerHTML = `<strong>❌ Error:</strong> Failed to connect to Gemini API.`;
+                showStatus('Failed to connect to Gemini API.', false);
+            });
+        }
+
+        // --- 5. Gemini Registration Analyzer ---
+        function analyzeRegistrations(eventId) {
+            const outputElement = document.getElementById(`summary-${eventId}`); 
+            outputElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generating Analysis Report...`;
+            outputElement.style.display = 'block';
+
+            showStatus('Generating Analysis Report...', true);
+
+            fetch(`/events/analyze_registrations/${eventId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    outputElement.innerHTML = `<strong>📊 Registration Analysis:</strong> ${result.report}`;
+                    showStatus('Analysis Report ready!', true);
+                } else {
+                    outputElement.innerHTML = `<strong>❌ Error:</strong> ${result.message}`;
+                    showStatus('Failed to generate analysis report.', false);
+                }
+            })
+            .catch(error => {
+                console.error('Analysis Fetch Error:', error);
+                outputElement.innerHTML = `<strong>❌ Error:</strong> Failed to connect to server for analysis.`;
+                showStatus('Failed to connect to server for analysis.', false);
+            });
+        }
+
+    </script>
+</body>
+</html>

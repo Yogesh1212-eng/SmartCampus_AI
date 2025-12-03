@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Percentage</title>
+    <!-- Tailwind CSS (Aesthetics) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { background-color: #f3f4f6; }
+        .container { max-width: 900px; }
+        .percentage-ring {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #1f2937;
+            background: conic-gradient(var(--ring-color) 0%, var(--ring-color) var(--percentage), #e5e7eb var(--percentage), #e5e7eb 100%);
+        }
+        .status-message {
+            padding: 4px 12px;
+            border-radius: 9999px; /* Pill shape */
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="container mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl">
+        <div class="flex justify-between items-center mb-8 border-b pb-4">
+            <h1 class="text-3xl font-extrabold text-blue-700">Attendance Percentage Tracker</h1>
+            <a href="/" class="text-white bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg transition duration-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Notification/Status Message -->
+        <div id="status-message" class="hidden p-3 mb-4 rounded-lg font-medium" role="alert"></div>
+
+        <!-- ----------------------------------------------------
+             GLOBAL VIEW: Display All Student Records (for everyone)
+             ---------------------------------------------------- -->
+        <div id="global-attendance-view" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                <i class="fas fa-list-alt mr-3"></i> Overall Student Attendance
+            </h2>
+            
+            <!-- Attendance List -->
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">All Student Records ({{ all_students|length }} Found)</h3>
+            <div class="table-container shadow-md">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                            <!-- Action column only visible to Admin -->
+                            {% if is_admin %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for student in all_students %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ student.student_id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium 
+                                {% if student.percentage >= 75 %}text-green-600{% elif student.percentage >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                {{ student.percentage }}%
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="status-message 
+                                    {% if student.status == 'Good' %}bg-green-100 text-green-700{% elif student.status == 'Warning' %}bg-yellow-100 text-yellow-700{% elif student.status == 'Critical' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ student.status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ student.last_updated }}</td>
+                            <!-- Action button only visible to Admin -->
+                            {% if is_admin %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="prefillForm('{{ student.student_id }}', '{{ student.percentage }}', '{{ student.status }}')"
+                                    class="text-indigo-600 hover:text-indigo-900 text-xs font-semibold p-1 rounded-md bg-indigo-50 hover:bg-indigo-100 transition">
+                                    Edit
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if not all_students %}
+                <p class="p-6 text-center text-gray-500">No student attendance records found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- ----------------------------------------------------
+             ADMIN ONLY PANEL (Update Form)
+             ---------------------------------------------------- -->
+        {% if is_admin %}
+        <div id="admin-master-view" class="mt-8 border-t pt-8">
+            <h2 class="text-2xl font-bold text-red-700 mb-4 flex items-center border-b pb-2">
+                <i class="fas fa-user-shield mr-3"></i> Admin Update Control
+            </h2>
+            
+            <!-- Update Form -->
+            <div id="admin-panel" class="p-6 border-2 border-red-200 bg-red-50 rounded-lg">
+                <h3 class="text-xl font-bold text-red-700 mb-4">
+                    Upload / Update Attendance Record
+                </h3>
+                <form id="attendance-form" class="space-y-4">
+                    <div>
+                        <label for="student_id" class="block text-sm font-medium text-gray-700">Student ID</label>
+                        <input type="text" id="student_id_input" name="student_id" required placeholder="E.g.: 123456"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-2 border">
+                    </div>
+                    <div>
+                        <label for="percentage" class="block text-sm font-medium text-gray-700">Percentage</label>
+                        <input type="number" id="percentage_input" name="percentage" min="0" max="100" required placeholder="75"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-2 border">
+                    </div>
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="status_select" name="status" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-2 border">
+                            <option value="Good">Good</option>
+                            <option value="Warning">Warning</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <button type="submit" 
+                            class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150">
+                        <i class="fas fa-upload mr-2"></i> Upload / Update Record
+                    </button>
+                </form>
+            </div>
+            
+            <a href="{{ url_for('admin_logout') }}" class="mt-6 inline-block text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition duration-200">
+                <i class="fas fa-sign-out-alt mr-2"></i> Admin Logout
+            </a>
+            
+        </div>
+        {% else %}
+        <!-- ----------------------------------------------------
+             STUDENT SINGLE VIEW (Below global view for non-admin)
+             ---------------------------------------------------- -->
+        <div id="student-view" class="mt-8 border-t pt-8">
+            <h2 class="text-2xl font-bold text-blue-600 mb-6 flex items-center">
+                <i class="fas fa-search mr-3"></i> Check Your Personal Attendance
+            </h2>
+            
+            <p class="text-sm text-gray-600 mb-4">
+                Enter your Student ID in the URL parameter to check your specific percentage. For example: 
+                <span class="font-mono bg-gray-100 p-1 rounded text-sm">/attendance?user_id=123456</span>
+            </p>
+            
+            <div class="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-10 p-6 border rounded-lg shadow-inner bg-blue-50">
+                
+                <!-- Percentage Ring -->
+                <div class="flex-shrink-0">
+                    <div id="percentage-display" 
+                         class="percentage-ring shadow-lg" 
+                         style="--percentage: {{ attendance.percentage }}%; 
+                                --ring-color: {% if attendance.percentage >= 75 %}#10b981{% elif attendance.percentage >= 60 %}#fbbf24{% else %}#ef4444{% endif %};">
+                        {{ attendance.percentage }}%
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="flex-grow space-y-4 text-center md:text-left">
+                    <p class="text-lg text-gray-700">
+                        <strong class="text-blue-900">Student ID:</strong> <span id="student-id-display" class="font-mono bg-gray-100 p-1 rounded">{{ attendance.student_id }}</span>
+                    </p>
+                    <p class="text-lg text-gray-700">
+                        <strong class="text-blue-900">Status:</strong> 
+                        <span id="status-display" class="status-message 
+                            {% if attendance.status == 'Good' %}bg-green-100 text-green-700{% elif attendance.status == 'Warning' %}bg-yellow-100 text-yellow-700{% elif attendance.status == 'Critical' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ attendance.status }}
+                        </span>
+                    </p>
+                    <p class="text-sm text-gray-500 mt-4">
+                        <i class="fas fa-sync-alt mr-1"></i> Last Updated: <span id="last-updated-display">{{ attendance.last_updated }}</span>
+                    </p>
+                    
+                    <div class="mt-6 p-4 bg-blue-100 border-l-4 border-blue-600 text-blue-800">
+                        {% if attendance.percentage < 75 %}
+                        <p class="font-semibold">⚠️ Important Notice:</p>
+                        <p class="text-sm">Your attendance is below 75%. Please attend your classes regularly.</p>
+                        {% else %}
+                        <p class="font-semibold">✅ Excellent!</p>
+                        <p class="text-sm">Your attendance is satisfactory. Keep it up.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t">
+                <a href="{{ url_for('admin_login') }}" class="mt-4 inline-block text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition duration-200">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Admin Login
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Status message utility
+        function showStatus(message, isSuccess = true) {
+            const statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            statusElement.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700');
+            statusElement.classList.add(isSuccess ? 'bg-green-100' : 'bg-red-100', isSuccess ? 'text-green-700' : 'text-red-700');
+            statusElement.classList.remove('hidden');
+
+            setTimeout(() => {
+                statusElement.classList.add('hidden');
+            }, 4000);
+        }
+        
+        // --- Admin Form Prefill ---
+        function prefillForm(studentId, percentage, status) {
+            document.getElementById('student_id_input').value = studentId;
+            document.getElementById('percentage_input').value = percentage;
+            document.getElementById('status_select').value = status;
+            showStatus(`Form pre-filled for Student ID: ${studentId}`, true);
+        }
+
+        // --- Admin Form Submission Logic ---
+        {% if is_admin %}
+        document.getElementById('attendance-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const studentId = formData.get('student_id');
+
+            // Create URL-encoded data for the POST request
+            const data = new URLSearchParams(formData);
+
+            showStatus(`Uploading attendance for ${studentId}...`, false);
+
+            fetch('/attendance/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data 
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showStatus(result.message, true);
+                    // Explicitly redirect to the current page path to force a non-cached server fetch
+                    window.location.href = window.location.pathname; 
+                } else {
+                    showStatus(`Error: ${result.message}`, false);
+                }
+            })
+            .catch(error => {
+                console.error('Update Fetch Error:', error);
+                showStatus("Failed to connect to server for update.", false);
+            });
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

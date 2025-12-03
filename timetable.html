@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Timetable</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        h1 { color: #007bff; text-align: center; margin-bottom: 30px; }
+        .back-btn { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; text-transform: uppercase; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .highlight { font-weight: bold; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        
+        <h1><i class="fas fa-clock"></i> Weekly Class Timetable</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Monday</th>
+                    <th>Tuesday</th>
+                    <th>Wednesday</th>
+                    <th>Thursday</th>
+                    <th>Friday</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="highlight">9:00 - 10:00 AM</td>
+                    <td>Physics (A101)</td>
+                    <td>Calculus (B205)</td>
+                    <td>Chemistry (A101)</td>
+                    <td>Digital Logic (C302)</td>
+                    <td>Free Hour</td>
+                </tr>
+                <tr>
+                    <td class="highlight">10:00 - 11:00 AM</td>
+                    <td>Calculus (B205)</td>
+                    <td>Physics (A101)</td>
+                    <td>Digital Logic (C302)</td>
+                    <td>Chemistry (A101)</td>
+                    <td>Web Dev (Lab)</td>
+                </tr>
+                <tr>
+                    <td class="highlight">11:00 - 12:00 PM</td>
+                    <td>Web Dev (Lecture)</td>
+                    <td>Chemistry (A101)</td>
+                    <td>Calculus (B205)</td>
+                    <td>Physics (A101)</td>
+                    <td>Digital Logic (C302)</td>
+                </tr>
+                <tr>
+                    <td colspan="6" style="text-align: center; background-color: #ffc107; font-weight: bold;">12:00 PM - 1:00 PM: LUNCH BREAK</td>
+                </tr>
+                <tr>
+                    <td class="highlight">1:00 - 2:00 PM</td>
+                    <td>Digital Logic (C302)</td>
+                    <td>Web Dev (Lecture)</td>
+                    <td>Physics (A101)</td>
+                    <td>Calculus (B205)</td>
+                    <td>Chemistry (A101)</td>
+                </tr>
+                <tr>
+                    <td class="highlight">2:00 - 4:00 PM</td>
+                    <td>AI Lab (C101)</td>
+                    <td>OS Lab (C101)</td>
+                    <td>Project Work</td>
+                    <td>Minor Project</td>
+                    <td>Sports/Club Activities</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p style="margin-top: 30px; text-align: center; color: #6c757d;">Last Updated: 2025-12-02</p>
+    </div>
+</body>
+</html>

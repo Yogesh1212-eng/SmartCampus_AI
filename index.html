@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCampus AI Chatbot</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base styling and Padding to account for fixed header/footer */
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 0;
+            padding-top: 60px; /* Space for fixed header */
+            padding-bottom: 70px; /* Space for fixed footer */
+            background-color: #ffffffff;
+        }
+        /* Fixed Header Styles */
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: #1e3a8a; /* Dark Blue */
+            box-shadow: 0 4px 6px rgba(29, 14, 243, 1);
+        }
+
+        /* Fixed Footer Styles (Customized) */
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: #e5e7eb; /* Light Gray background */
+            border-top: 3px solid #1e3a8a; /* Accent border */
+            box-shadow: 0 -2px 8px rgba(11, 46, 243, 1);
+            color: #4b5563; /* Darker text */
+        }
+        
+        /* --------------------
+        Dashboard Styling 
+           -------------------- */
+        #dashboard-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+            min-height: calc(100vh - 130px); /* Adjust min-height for header/footer */
+            background-color: #ebebf263;
+        }
+
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .feature-box {
+            flex: 1 1 30%;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            aspect-ratio: 1.2 / 1;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                flex-direction: column;
+                align-items: center;
+            }
+            .feature-box {
+                width: 90%;
+                max-width: 400px;
+            }
+        }
+
+        .feature-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(5, 30, 222, 1);
+        }
+
+        .feature-box h2 {
+            color: #1d05f0ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .feature-box p {
+            color: #1b0202ff;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        /* --------------------
+           Chat Icon/Window Styling (UPDATED POSITIONING)
+           -------------------- */
+        #chat-icon { 
+            position: fixed; 
+            bottom: 120px; /* Moved up slightly to clear the fixed footer */
+            right: 10px; /* SHIFTED FROM RIGHT TO LEFT */ 
+            width: 60px; 
+            height: 60px; 
+            background-color: #007bff; 
+            color: white; 
+            border-radius: 50%; 
+            text-align: center; 
+            line-height: 60px; 
+            font-size: 24px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); 
+            z-index: 1000; 
+            transition: background-color 0.3s; 
+        }
+
+        #chat-icon:hover {
+            transform: translateY(-3px);
+            box-shadow:  0px  8px 40px rgba(0, 0, 0, 1);
+            scale:1.1;
+            transition:all 0.3s linear;
+        }
+
+        #chat-window { 
+            position: fixed; 
+            bottom: 80px; /* Moved up slightly to clear the fixed footer */
+            right: 20px; /* SHIFTED FROM RIGHT TO LEFT */
+            width: 350px; 
+            height: 500px; 
+            background: white; 
+            border: 1px solid #ccc; 
+            border-radius: 10px; 
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 1); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 999; 
+            overflow: hidden; 
+        }
+
+        .hidden { display: none !important; }
+        #chat-header { background-color: #007bff; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        #close-btn { cursor: pointer; font-size: 24px; line-height: 1; }
+        #chatbox { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 80%; padding: 8px 12px; border-radius: 15px; line-height: 1.4; word-wrap: break-word; }
+        .user { align-self: flex-end; background-color: #dcf8c6; border-bottom-right-radius: 5px; }
+        .bot { align-self: flex-start; background-color: #f1f0f0; border-bottom-left-radius: 5px; }
+        #chat-form { display: flex; padding: 10px; border-top: 1px solid #eee; }
+        #textInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; margin-right: 10px; }
+        #send-button { background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- GLOBAL HEADER -->
+    <header class="fixed-header px-6 py-3 flex justify-between items-center">
+        <div class="text-xl font-bold text-white flex items-center">
+            <i class="fas fa-graduation-cap mr-2 text-green-300"></i> SmartCampus Portal
+        </div>
+        <a href="/" class="text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg transition duration-200 text-sm font-semibold">
+            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+        </a>
+    </header>
+
+    <div id="chat-icon" onclick="toggleChat()">
+        🤖
+    </div>
+
+    <div id="chat-window" class="hidden">
+        <div id="chat-header">
+            SmartCampus AI Chatbot
+            <span id="close-btn" onclick="toggleChat()">&times;</span> 
+        </div>
+        
+        <div id="chatbox">
+            <div class="message bot">Hello! How can I assist you with the SmartCampus today?</div>
+        </div>
+        
+        <form id="chat-form">
+            <input id="textInput" type="text" name="msg" placeholder="Type your message..." autocomplete="off" required>
+            <input id="send-button" type="submit" value="Send">
+        </form>
+    </div>
+
+    <div id="dashboard-container">
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-8">SmartCampus Dashboard</h1>
+        
+        <!-- ROW 1 (3 Boxes) -->
+        <div class="row">
+            <div class="feature-box" id="events-box" onclick="window.location.href='/events'"> 
+                <h2><i class="fas fa-calendar-alt"></i> Events</h2>
+                <p>Admin: Create, schedule, and manage events.</p>
+                <p>Students: View events and register to participate.</p>
+            </div>
+
+            <div class="feature-box" id="timetable-box" onclick="window.location.href='/timetable'">
+                <h2><i class="fas fa-clock"></i> Class Timetable</h2>
+                <p>View the current week's class schedule.</p>
+                <p>Lectures, timings, and location details.</p>
+            </div>
+
+            <div class="feature-box" id="attendance-box" onclick="window.location.href='/attendance'">
+                <h2><i class="fas fa-chart-bar"></i> Attendance Percentage</h2>
+                <p>Admin: Upload or update student records.</p>
+                <p>Students: Check attendance and overall records.</p>
+            </div>
+        </div>
+
+        <!-- ROW 2 (2 Boxes) -->
+        <div class="row" style="max-width: 650px;">
+            <div class="feature-box" id="circulars-box" onclick="window.location.href='/circulars'">
+                <h2><i class="fas fa-bullhorn"></i> Circulars</h2>
+                <p>Admin: Publish important notices and documents.</p>
+                <p>Students: View all campus circulars instantly.</p>
+            </div>
+
+            <div class="feature-box" id="results-box" onclick="window.location.href='/results'">
+                <h2><i class="fas fa-poll-h"></i> Results</h2>
+                <p>Admin: Upload exam results and grade sheets.</p>
+                <p>Students: Check individual and public result records.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GLOBAL FOOTER (Customized) -->
+    <footer class="fixed-footer px-6 py-3 text-center text-sm flex justify-between items-center">
+        <div class="text-left text-xs">
+            &copy; 2025 SmartCampus AI. All Rights Reserved.
+        </div>
+        <div class="text-right text-xs">
+            <span class="font-semibold text-gray-700">Designed & Created by Yogesh Maurya</span>
+            <span class="block text-gray-500">
+                <i class="fas fa-envelope mr-1"></i> 2300560100250@bbdniit.ac.in
+            </span>
+        </div>
+    </footer>
+    
+    <script>
+        // Function to toggle the chat window visibility
+        function toggleChat() {
+            const chatWindow = document.getElementById('chat-window');
+            const chatIcon = document.getElementById('chat-icon');
+            
+            chatWindow.classList.toggle('hidden');
+
+            if (chatWindow.classList.contains('hidden')) {
+                chatIcon.style.display = 'block';
+            } else {
+                chatIcon.style.display = 'none';
+                document.getElementById('textInput').focus();
+            }
+        }
+
+        // Function to scroll the chatbox to the bottom
+        function scrollToBottom() {
+            const chatbox = document.getElementById('chatbox');
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        // Function to display a message in the chatbox
+        function displayMessage(text, sender) {
+            const chatbox = document.getElementById('chatbox');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+            msgDiv.innerHTML = text;
+            chatbox.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        // Get the form and input elements
+        const chatForm = document.getElementById('chat-form');
+        const textInput = document.getElementById('textInput');
+        
+        // Handle form submission
+        chatForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const userMsg = textInput.value.trim();
+
+            if (userMsg === "") return;
+
+            // 1. Display user message
+            displayMessage(userMsg, 'user');
+            textInput.value = '';
+
+            // 2. Fetch bot reply from Flask API
+            fetch(`/get?msg=${encodeURIComponent(userMsg)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 3. Display bot reply
+                    displayMessage(data.reply, 'bot');
+                })
+                .catch(error => {
+                    console.error("Fetch Error:", error);
+                    displayMessage("Sorry, an error occurred. Please try again.", 'bot');
+                });
+        });
+        document.addEventListener('DOMContentLoaded', scrollToBottom);
+    </script>
+</body>
+</html>

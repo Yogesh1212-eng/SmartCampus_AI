@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { background-color: #f3f4f6; }
+        .container { max-width: 900px; }
+        .result-card {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .result-detail { white-space: pre-wrap; font-family: monospace; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="container mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl">
+        <div class="flex justify-between items-center mb-8 border-b pb-4">
+            <h1 class="text-3xl font-extrabold text-green-700">
+                <i class="fas fa-poll-h mr-2"></i> Examination Results
+            </h1>
+            <a href="/" class="text-white bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg transition duration-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div id="status-message" class="hidden p-3 mb-4 rounded-lg font-medium" role="alert"></div>
+
+        <!-- ----------------------------------------------------
+             ADMIN ONLY PANEL (Update/Upload Form)
+             ---------------------------------------------------- -->
+        {% if is_admin %}
+        <div id="admin-panel" class="mb-8 p-6 border-2 border-green-200 bg-green-50 rounded-lg">
+            <h2 class="text-2xl font-bold text-green-700 mb-4 flex items-center">
+                <i class="fas fa-user-shield mr-3"></i> Admin: Upload Results
+            </h2>
+            <form id="result-form" class="space-y-4">
+                <div>
+                    <label for="doc_id" class="block text-sm font-medium text-gray-700">Result ID (e.g., Semester-4-2025)</label>
+                    <input type="text" id="doc_id_input" name="doc_id" required placeholder="Unique ID for this result batch"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="title_input" name="title" required placeholder="e.g., B.Tech Final Year Results"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label for="details" class="block text-sm font-medium text-gray-700">Details (Use Markdown/Plain Text for Table)</label>
+                    <textarea id="details_input" name="details" rows="8" required placeholder="Paste the full result table/data here. Students will see this. Example:
+Roll No. | Name | Grade
+---|---|---
+1001 | Alice | A
+1002 | Bob | B+"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"></textarea>
+                </div>
+                <button type="submit" 
+                        class="w-full py-2 px-4 rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                    <i class="fas fa-upload mr-2"></i> Upload / Update Results
+                </button>
+            </form>
+            <a href="{{ url_for('admin_logout') }}" class="mt-4 inline-block text-white bg-red-500 hover:bg-red-600 px-3 py-1 text-sm rounded-lg float-right">
+                <i class="fas fa-sign-out-alt mr-1"></i> Logout
+            </a>
+            <div class="clearfix"></div>
+        </div>
+        {% else %}
+        <a href="{{ url_for('admin_login') }}" class="mt-4 inline-block text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg float-right">
+            <i class="fas fa-sign-in-alt mr-2"></i> Admin Login
+        </a>
+        <div class="clearfix"></div>
+        {% endif %}
+
+        <!-- ----------------------------------------------------
+             GLOBAL VIEW: Results List
+             ---------------------------------------------------- -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Published Exam Results ({{ records|length }} Found)</h2>
+
+        <div class="space-y-6">
+            {% for record in records %}
+            <div class="result-card p-6 bg-white hover:shadow-lg transition duration-200">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-xl font-bold text-gray-900">{{ record.title }}</h3>
+                    {% if is_admin %}
+                    <button onclick="prefillForm('{{ record.doc_id }}', '{{ record.title|e }}', '{{ record.details|e }}')" 
+                            class="text-sm text-blue-600 hover:text-blue-800 font-semibold p-1 rounded-md bg-blue-50">
+                            Edit
+                    </button>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-500 mb-3">ID: {{ record.doc_id }} | Published: {{ record.last_updated }}</p>
+                <div class="result-detail border p-3 bg-gray-50 text-sm text-gray-700 overflow-x-auto">
+                    {{ record.details }}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not records %}
+            <p class="text-center text-gray-500 p-10 bg-gray-50 rounded-lg">No results have been published yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function showStatus(message, isSuccess = true) {
+            const statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            statusElement.className = `p-3 mb-4 rounded-lg font-medium ${isSuccess ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            statusElement.classList.remove('hidden');
+
+            setTimeout(() => {
+                statusElement.classList.add('hidden');
+            }, 4000);
+        }
+
+        {% if is_admin %}
+        function prefillForm(docId, title, details) {
+            document.getElementById('doc_id_input').value = docId;
+            document.getElementById('title_input').value = title;
+            
+            const unescape = (str) => {
+                const doc = new DOMParser().parseFromString(str, 'text/html');
+                return doc.documentElement.textContent;
+            };
+            document.getElementById('details_input').value = unescape(details);
+            showStatus(`Form pre-filled for Result ID: ${docId}`, true);
+        }
+
+        document.getElementById('result-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const docId = formData.get('doc_id');
+            const data = new URLSearchParams(formData);
+
+            showStatus(`Uploading results ${docId}...`, false);
+
+            fetch('/results/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data 
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showStatus(result.message, true);
+                    window.location.href = window.location.pathname; 
+                } else {
+                    showStatus(`Error: ${result.message}`, false);
+                }
+            })
+            .catch(error => {
+                console.error('Update Fetch Error:', error);
+                showStatus("Failed to connect to server for update.", false);
+            });
+        });
+        {% endif %}
+    </script>
+</body>
+</html>
